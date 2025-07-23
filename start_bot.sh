@@ -4,7 +4,7 @@ echo "🚀 Starting Updated ID Card Bot System..."
 
 # Start the updated Telegram bot in background
 echo "📱 Starting Updated Telegram Bot..."
-python3 updated_bot.py &
+python3 bot.py &
 BOT_PID=$!
 
 # Wait a moment for bot to initialize
@@ -12,7 +12,9 @@ sleep 3
 
 # Start the admin panel
 echo "🔧 Starting Admin Panel..."
-cd admin_panel
+# Navigate to the admin_panel directory relative to the script's location
+SCRIPT_DIR=$(dirname "$0")
+cd "$SCRIPT_DIR/admin_panel" || { echo "Error: admin_panel directory not found. Please ensure it's in the same directory as start_bot.sh"; exit 1; }
 source venv/bin/activate
 python src/main.py &
 ADMIN_PID=$!
@@ -35,4 +37,5 @@ read -p "Press Enter to stop the system..."
 # Stop both processes
 kill $BOT_PID $ADMIN_PID 2>/dev/null
 echo "🛑 System stopped."
+
 
