@@ -2,39 +2,54 @@ import os
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 import uuid
+import random
 from typing import Optional, Tuple
 
-class ImprovedIDCardGenerator:
+class EnhancedIDCardGenerator:
     def __init__(self):
         self.output_dir = "generated_cards"
         self.templates_dir = "templates"
         self.photos_dir = "user_photos"
+        self.logos_dir = "college_logos"
         self.ensure_directories()
         
-        # College information
+        # Blood group options
+        self.blood_groups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+        
+        # College information with logo paths
         self.colleges = {
             "1": {
-                "name": "Indian Institute of Science (IISc) Bangalore",
+                "name": "INDIAN INSTITUTE OF SCIENCE (IISc) BANGALORE",
+                "short_name": "IISc Bangalore",
+                "logo_path": "college_logos/IISc_Bangalore_logo.png",
                 "colors": {"primary": "#1E3A8A", "secondary": "#3B82F6", "text": "#1F2937"},
                 "authority": "Academic Office, IISc Bangalore"
             },
             "2": {
-                "name": "Indian Institute of Technology (IIT) Madras",
+                "name": "INDIAN INSTITUTE OF TECHNOLOGY (IIT) MADRAS",
+                "short_name": "IIT Madras",
+                "logo_path": "college_logos/IIT_Madras_logo.png",
                 "colors": {"primary": "#7C2D12", "secondary": "#DC2626", "text": "#1F2937"},
                 "authority": "Academic Section, IIT Madras"
             },
             "3": {
-                "name": "Indian Institute of Technology (IIT) Bombay",
+                "name": "INDIAN INSTITUTE OF TECHNOLOGY (IIT) BOMBAY",
+                "short_name": "IIT Bombay",
+                "logo_path": "college_logos/IIT_Bombay_logo.png",
                 "colors": {"primary": "#1E40AF", "secondary": "#DC2626", "text": "#1F2937"},
                 "authority": "Academic Office, IIT Bombay"
             },
             "4": {
-                "name": "Indian Institute of Technology (IIT) Delhi",
+                "name": "INDIAN INSTITUTE OF TECHNOLOGY (IIT) DELHI",
+                "short_name": "IIT Delhi",
+                "logo_path": "college_logos/IIT_Delhi_logo.png",
                 "colors": {"primary": "#DC2626", "secondary": "#FFFFFF", "text": "#1F2937"},
                 "authority": "Academic Section, IIT Delhi"
             },
             "5": {
-                "name": "Jawaharlal Nehru University (JNU)",
+                "name": "JAWAHARLAL NEHRU UNIVERSITY (JNU)",
+                "short_name": "JNU",
+                "logo_path": "college_logos/JNU_logo.jpg",
                 "colors": {"primary": "#1E40AF", "secondary": "#FFFFFF", "text": "#1F2937"},
                 "authority": "Academic Branch, JNU"
             }
@@ -45,6 +60,7 @@ class ImprovedIDCardGenerator:
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.templates_dir, exist_ok=True)
         os.makedirs(self.photos_dir, exist_ok=True)
+        os.makedirs(self.logos_dir, exist_ok=True)
     
     def generate_qr_code(self, data: str, size: int = 120) -> Image.Image:
         """Generate QR code image with better quality"""
@@ -78,6 +94,27 @@ class ImprovedIDCardGenerator:
         
         # Fallback to default font
         return ImageFont.load_default()
+    
+    def load_college_logo(self, college_id: str) -> Optional[Image.Image]:
+        """Load college logo if available"""
+        try:
+            college_info = self.colleges.get(college_id)
+            if not college_info:
+                return None
+            
+            logo_path = college_info["logo_path"]
+            if os.path.exists(logo_path):
+                logo = Image.open(logo_path)
+                # Convert to RGBA if necessary
+                if logo.mode != 'RGBA':
+                    logo = logo.convert('RGBA')
+                # Resize logo to appropriate size (90x90)
+                logo = logo.resize((90, 90), Image.Resampling.LANCZOS)
+                return logo
+        except Exception as e:
+            print(f"Error loading logo: {e}")
+        
+        return None
     
     def process_user_photo(self, photo_path: str) -> Image.Image:
         """Process user photo for ID card"""
@@ -124,8 +161,12 @@ class ImprovedIDCardGenerator:
             draw.text((75, 90), "PHOTO", font=font, fill="gray", anchor="mm")
             return placeholder
     
-    def create_clean_template(self, college_id: str) -> Image.Image:
-        """Create a clean template without duplicate fields"""
+    def generate_random_blood_group(self) -> str:
+        """Generate random blood group"""
+        return random.choice(self.blood_groups)
+    
+    def create_professional_template(self, college_id: str) -> Image.Image:
+        """Create a professional template with logo and enhanced design"""
         college_info = self.colleges[college_id]
         
         # Standard ID card dimensions (CR80 format scaled up)
@@ -139,49 +180,76 @@ class ImprovedIDCardGenerator:
         primary_color = college_info["colors"]["primary"]
         secondary_color = college_info["colors"]["secondary"]
         
-        # Header section
-        header_height = 140
+        # Header section with gradient effect
+        header_height = 160
         draw.rectangle([0, 0, width, header_height], fill=primary_color)
         
-        # College name
-        college_name = college_info["name"]
-        title_font = self.get_font(22, bold=True)
-        
-        # Split long college names into multiple lines
-        if len(college_name) > 35:
-            words = college_name.split()
-            line1 = " ".join(words[:len(words)//2])
-            line2 = " ".join(words[len(words)//2:])
+        # Load and place college logo
+        logo = self.load_college_logo(college_id)
+        if logo:
+            logo_x = 30
+            logo_y = 35
+            card.paste(logo, (logo_x, logo_y), logo)
             
-            draw.text((width//2, 45), line1, font=title_font, fill="white", anchor="mm")
-            draw.text((width//2, 75), line2, font=title_font, fill="white", anchor="mm")
+            # College name positioned next to logo
+            college_name = college_info["name"]
+            title_font = self.get_font(28, bold=True)
+            
+            # Calculate text width for underlining
+            text_width = draw.textlength(college_name, font=title_font)
+            
+            # Position for the college name
+            text_x = logo_x + 110
+            text_y = 60
+            
+            draw.text((text_x, text_y), college_name, font=title_font, fill="white")
+            
+            # Underline the text
+            underline_y = text_y + title_font.getbbox(college_name)[3] + 5 # Adjust based on font metrics
+            draw.line((text_x, underline_y, text_x + text_width, underline_y), fill="white", width=2)
         else:
-            draw.text((width//2, 60), college_name, font=title_font, fill="white", anchor="mm")
+            # Fallback: center the college name if no logo
+            college_name = college_info["name"]
+            title_font = self.get_font(30, bold=True)
+            
+            # Calculate text width for underlining
+            text_width = draw.textlength(college_name, font=title_font)
+            
+            # Position for the college name
+            text_x = (width - text_width) // 2
+            text_y = 60
+            
+            draw.text((text_x, text_y), college_name, font=title_font, fill="white")
+            
+            # Underline the text
+            underline_y = text_y + title_font.getbbox(college_name)[3] + 5 # Adjust based on font metrics
+            draw.line((text_x, underline_y, text_x + text_width, underline_y), fill="white", width=2)
         
         # Student ID banner
         banner_y = header_height
         banner_height = 60
         draw.rectangle([0, banner_y, width, banner_y + banner_height], fill=secondary_color)
         
-        id_font = self.get_font(28, bold=True)
+        id_font = self.get_font(32, bold=True)
         draw.text((width//2, banner_y + 30), "STUDENT ID", font=id_font, fill="white", anchor="mm")
         
-        # Footer
-        draw.rectangle([0, height - 40, width, height], fill=primary_color)
+        # Footer with college branding
+        footer_height = 50
+        draw.rectangle([0, height - footer_height, width, height], fill=primary_color)
         
         return card
     
     async def generate_id_card(self, college_id: str, student_name: str, 
                              father_name: str, phone: str, department: str, 
                              qr_data: str, photo_path: str = None) -> str:
-        """Generate ID card with enhanced quality and photo support"""
+        """Generate ID card with enhanced quality, logo, and blood group"""
         
         college_info = self.colleges.get(college_id)
         if not college_info:
             raise ValueError(f"Invalid college ID: {college_id}")
         
-        # Create clean template
-        card = self.create_clean_template(college_id)
+        # Create professional template
+        card = self.create_professional_template(college_id)
         draw = ImageDraw.Draw(card)
         
         # Get dimensions
@@ -190,23 +258,26 @@ class ImprovedIDCardGenerator:
         # Colors
         text_color = college_info["colors"]["text"]
         
-        # Fonts
-        name_font = self.get_font(26, bold=True)
-        father_font = self.get_font(20)
-        info_font = self.get_font(18)
+        # Fonts with enhanced sizing
+        label_font = self.get_font(18, bold=True)
+        value_font = self.get_font(22)
+        name_font = self.get_font(30, bold=True) # Larger and bolder name
         small_font = self.get_font(16)
-        label_font = self.get_font(14, bold=True)
         
         # Photo section
-        photo_x, photo_y = 50, 220
+        photo_x, photo_y = 50, 240
         photo_width, photo_height = 150, 180
         
         if photo_path and os.path.exists(photo_path):
             # Process and add user photo
             user_photo = self.process_user_photo(photo_path)
             card.paste(user_photo, (photo_x, photo_y))
+            
+            # Add photo border
+            draw.rectangle([photo_x-2, photo_y-2, photo_x + photo_width+2, photo_y + photo_height+2], 
+                          outline="black", width=2)
         else:
-            # Draw photo placeholder
+            # Draw photo placeholder with border
             draw.rectangle([photo_x, photo_y, photo_x + photo_width, photo_y + photo_height], 
                           outline="black", width=3, fill="#F3F4F6")
             photo_font = self.get_font(16)
@@ -214,58 +285,71 @@ class ImprovedIDCardGenerator:
                      font=photo_font, fill="gray", anchor="mm")
         
         # Information section (right side of photo)
-        info_x = photo_x + photo_width + 30
-        info_y = photo_y + 20
+        info_x = photo_x + photo_width + 40
+        info_y = photo_y + 10
+        line_height = 45
         
         # Student name
-        draw.text((info_x, info_y), "STUDENT NAME:", font=label_font, fill=text_color)
-        
-        # Handle long names
-        if len(student_name) > 18:
-            name_font = self.get_font(22, bold=True)
-        
+        draw.text((info_x, info_y), "STUDENT NAME", font=label_font, fill=text_color)
         draw.text((info_x, info_y + 25), student_name.upper(), font=name_font, fill=text_color)
         
         # Father's name
-        draw.text((info_x, info_y + 70), "FATHER'S NAME:", font=label_font, fill=text_color)
-        draw.text((info_x, info_y + 95), father_name, font=father_font, fill=text_color)
+        draw.text((info_x, info_y + line_height * 2), "FATHER'S NAME", font=label_font, fill=text_color)
+        draw.text((info_x, info_y + line_height * 2 + 25), father_name, font=value_font, fill=text_color)
         
-        # Information below photo
-        below_photo_y = photo_y + photo_height + 30
+        # Student ID Number (generated)
+        student_id = f"{college_info['short_name'][:3].upper()}{random.randint(100000, 999999)}"
+        draw.text((info_x, info_y + line_height * 4), "STUDENT ID:", font=label_font, fill=text_color)
+        draw.text((info_x, info_y + line_height * 4 + 25), student_id, font=value_font, fill=text_color)
         
-        # Phone number (single entry)
-        draw.text((50, below_photo_y), "PHONE:", font=label_font, fill=text_color)
-        draw.text((50, below_photo_y + 25), phone, font=info_font, fill=text_color)
+        # Information below photo, aligned to the left
+        below_photo_y = photo_y + photo_height + 40
+        left_align_x = 50
         
-        # Department (single entry)
-        draw.text((50, below_photo_y + 65), "DEPARTMENT:", font=label_font, fill=text_color)
+        # Phone number
+        draw.text((left_align_x, below_photo_y), "PHONE:", font=label_font, fill=text_color)
+        draw.text((left_align_x, below_photo_y + 25), phone, font=value_font, fill=text_color)
+        
+        # Department
+        draw.text((left_align_x, below_photo_y + line_height), "DEPARTMENT:", font=label_font, fill=text_color)
         
         # Truncate long department names
-        if len(department) > 35:
-            department = department[:32] + "..."
+        if len(department) > 30:
+            department = department[:27] + "..."
         
-        draw.text((50, below_photo_y + 90), department, font=info_font, fill=text_color)
+        draw.text((left_align_x, below_photo_y + line_height + 25), department, font=value_font, fill=text_color)
+        
+        # Blood Group - NEW FIELD
+        blood_group = self.generate_random_blood_group()
+        draw.text((left_align_x, below_photo_y + line_height * 2), "BLOOD GROUP:", font=label_font, fill=text_color)
+        draw.text((left_align_x, below_photo_y + line_height * 2 + 25), blood_group, font=value_font, fill="#DC2626")  # Red color for blood group
         
         # Issue authority
-        authority_y = card_height - 200
-        draw.text((50, authority_y), "ISSUED BY:", font=label_font, fill=text_color)
-        draw.text((50, authority_y + 25), college_info["authority"], font=small_font, fill=text_color)
+        authority_y = card_height - 220
+        draw.text((left_align_x, authority_y), "ISSUED BY:", font=label_font, fill=text_color)
+        draw.text((left_align_x, authority_y + 25), college_info["authority"], font=small_font, fill=text_color)
+        
+        # Issue date
+        from datetime import datetime
+        issue_date = datetime.now().strftime("%d/%m/%Y")
+        draw.text((left_align_x, authority_y + 50), f"ISSUE DATE: {issue_date}", font=small_font, fill=text_color)
         
         # Generate and add QR code
-        qr_img = self.generate_qr_code(qr_data, 120)
+        enhanced_qr_data = f"Name: {student_name}\nFather: {father_name}\nPhone: {phone}\nCollege: {college_info['name']}\nDept: {department}\nBlood Group: {blood_group}\nStudent ID: {student_id}\nIssue Date: {issue_date}"
+        qr_img = self.generate_qr_code(enhanced_qr_data, 130)
         
         # Position QR code (bottom right)
-        qr_x = card_width - 140
-        qr_y = card_height - 140
+        qr_x = card_width - 150
+        qr_y = card_height - 170
         
         # Add white background for QR code
-        qr_bg = Image.new("RGB", (130, 130), "white")
+        qr_bg = Image.new("RGB", (140, 140), "white")
         card.paste(qr_bg, (qr_x-5, qr_y-5))
         card.paste(qr_img, (qr_x, qr_y))
         
         # Add QR code label
-        draw.text((qr_x + 60, qr_y - 20), "SCAN FOR VERIFICATION", 
-                 font=self.get_font(10), fill=text_color, anchor="mm")
+        draw.text((qr_x + 65, qr_y - 25), "SCAN FOR VERIFICATION", 
+                 font=self.get_font(10, bold=True), fill=text_color, anchor="mm")
         
         # Generate unique filename
         card_filename = f"id_card_{college_id}_{uuid.uuid4().hex[:8]}.png"
