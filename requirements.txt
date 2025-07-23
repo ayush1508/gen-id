@@ -1,0 +1,6 @@
+python-telegram-bot==22.3
+qrcode[pil]==8.2
+Pillow==11.3.0
+flask==3.1.0
+flask-cors==5.0.0
+
